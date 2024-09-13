@@ -7,5 +7,6 @@ let doc = new JSDOM(html,
                     { url: 'https://nyan.cat'})
 let reader = new Readability(doc.window.document)
 let article = reader.parse()
-let md = new TurndownService().turndown(article.content)
+let turndown = new TurndownService({ headingStyle: 'atx' })
+let md = turndown.turndown(article.content)
 console.log(md)
