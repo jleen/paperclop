@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { extname } from 'node:path';
@@ -14,7 +15,7 @@ let article = new Readability(dom.window.document).parse();
 
 let doc = new JSDOM(article.content, { url: url }).window.document;
 for (let img of doc.getElementsByTagName('img')) {
-    let offlineImg = 'img' + Math.random() + extname(img.src);
+    let offlineImg = 'img_' + randomBytes(8).toString('hex') + extname(img.src);
     let imgresponse = await fetch(img.src);
     let body = Readable.fromWeb(imgresponse.body);
     await writeFile(`out/${offlineImg}`, body);
