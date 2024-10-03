@@ -16,7 +16,7 @@ let article = new Readability(dom.window.document).parse();
 
 let doc = new JSDOM(article.content, { url: url }).window.document;
 for (let img of doc.getElementsByTagName('img')) {
-    let offlineImg = 'img_' + randomBytes(8).toString('hex') + extname(img.src);
+    let offlineImg = 'img_' + randomBytes(8).toString('hex') + extname(img.src.split('?')[0]);
     let imgResponse = await fetch(img.src);
     let body = Readable.fromWeb(imgResponse.body);
     await writeFile(`out/${offlineImg}`, body);
