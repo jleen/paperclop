@@ -5,6 +5,7 @@ import { extname } from 'node:path';
 
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
+import sanitize from 'sanitize-filename';
 import TurndownService from 'turndown';
 
 let url = process.argv[2];
@@ -28,4 +29,5 @@ let turndown = new TurndownService({
     codeBlockStyle: 'fenced', emDelimiter: '*' });
 let md = turndown.turndown(doc.documentElement.outerHTML);
 
-await writeFile('out/article.md', md);
+let title = sanitize(article.title.replace('/', '-'));
+await writeFile(`out/${title}.md`, md);
