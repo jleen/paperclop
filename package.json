@@ -5,7 +5,11 @@
   "main": "main.js",
   "type": "module",
   "scripts": {
+    "start": "node main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "paperclop": "main.js"
   },
   "author": "",
   "license": "ISC",

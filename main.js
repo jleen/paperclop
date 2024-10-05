@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { randomBytes } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
