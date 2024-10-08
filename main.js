@@ -21,7 +21,7 @@ for (let img of doc.getElementsByTagName('img')) {
     let offlineImg = 'img_' + randomBytes(8).toString('hex') + extname(img.src.split('?')[0]);
     let imgResponse = await fetch(img.src);
     let body = Readable.fromWeb(imgResponse.body);
-    await writeFile(`out/${offlineImg}`, body);
+    await writeFile(`out/${offlineImg}`, body, { flag: 'wx' });
     console.log(`${img.src} -> ${offlineImg}`);
     img.src = offlineImg;
 }
@@ -32,5 +32,5 @@ let turndown = new TurndownService({
 let md = turndown.turndown(doc.documentElement.outerHTML);
 
 let title = sanitize(article.title.replace('/', '-'));
-await writeFile(`out/${title}.md`, md);
+await writeFile(`out/${title}.md`, md, { flag: 'wx' });
 console.log(`${url} -> ${title}.md`)
