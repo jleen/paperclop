@@ -33,3 +33,4 @@ let md = turndown.turndown(doc.documentElement.outerHTML);
 
 let title = sanitize(article.title.replace('/', '-'));
 await writeFile(`out/${title}.md`, md);
+console.log(`${url} -> ${title}.md`)
