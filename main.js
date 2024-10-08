@@ -15,15 +15,13 @@ let response = await fetch(url);
 let html = await response.text();
 let dom = new JSDOM(html, { url: url });
 let article = new Readability(dom.window.document).parse();
-
 let doc = new JSDOM(article.content, { url: url }).window.document;
+let images = [];
+
 for (let img of doc.getElementsByTagName('img')) {
-    let offlineImg = 'img_' + randomBytes(8).toString('hex') + extname(img.src.split('?')[0]);
-    let imgResponse = await fetch(img.src);
-    let body = Readable.fromWeb(imgResponse.body);
-    await writeFile(`out/${offlineImg}`, body, { flag: 'wx' });
-    console.log(`${img.src} -> ${offlineImg}`);
-    img.src = offlineImg;
+    let renamed = 'img_' + randomBytes(8).toString('hex') + extname(img.src.split('?')[0]);
+    images.push({ src: img.src, target: renamed });
+    img.src = renamed;
 }
 
 let turndown = new TurndownService({
@@ -33,4 +31,11 @@ let md = turndown.turndown(doc.documentElement.outerHTML);
 
 let title = sanitize(article.title.replace('/', '-'));
 await writeFile(`out/${title}.md`, md, { flag: 'wx' });
-console.log(`${url} -> ${title}.md`)
+console.log(`${url} -> ${title}.md`);
+
+for (let img of images) {
+    let fetched = await fetch(img.src);
+    let body = Readable.fromWeb(fetched.body);
+    await writeFile(`out/${img.target}`, body, { flag: 'wx' });
+    console.log(`${img.src} -> ${img.target}`);
+}
