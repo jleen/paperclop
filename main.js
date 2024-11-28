@@ -30,12 +30,12 @@ let turndown = new TurndownService({
 let md = turndown.turndown(doc.documentElement.outerHTML);
 
 let title = sanitize(article.title.replace('/', '-'));
-await writeFile(`out/${title}.md`, md, { flag: 'wx' });
+await writeFile(`${title}.md`, md, { flag: 'wx' });
 console.log(`${url} -> ${title}.md`);
 
 for (let img of images) {
     let fetched = await fetch(img.src);
     let body = Readable.fromWeb(fetched.body);
-    await writeFile(`out/${img.target}`, body, { flag: 'wx' });
+    await writeFile(`Assets/${img.target}`, body, { flag: 'wx' });
     console.log(`${img.src} -> ${img.target}`);
 }
