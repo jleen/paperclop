@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { randomBytes } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { Readable } from 'node:stream';
-import { extname } from 'node:path';
+import { extname, join } from 'node:path';
 
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
@@ -21,6 +21,11 @@ const argv = yargs(hideBin(process.argv))
     .option('o', {
         alias: 'out',
         describe: 'Output filename (.md implied)',
+        type: 'string'
+    })
+    .option('d', {
+        alias: 'dir',
+        describe: 'Output subdirectory for the markdown file',
         type: 'string'
     })
     .demandCommand(1, 'Please provide a URL')
@@ -48,8 +53,15 @@ let turndown = new TurndownService({
 let md = turndown.turndown(doc.documentElement.outerHTML);
 
 let title = argv.out ?? sanitize(article.title.replace('/', '-'));
-await writeFile(`${title}.md`, md, { flag: 'wx' });
-console.log(`${url} -> ${title}.md`);
+let outputPath = argv.dir ? join(argv.dir, `${title}.md`) : `${title}.md`;
+
+// Create output directory if it doesn't exist
+if (argv.dir) {
+    await mkdir(argv.dir, { recursive: true });
+}
+
+await writeFile(outputPath, md, { flag: 'wx' });
+console.log(`${url} -> ${outputPath}`);
 
 for (let img of images) {
     let fetched = await fetch(img.src);
