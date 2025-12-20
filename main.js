@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import { Buffer } from 'node:buffer';
 import { randomBytes } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
 import { extname, join } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
@@ -65,8 +66,8 @@ await writeFile(outputPath, md, { flag: 'wx' });
 console.log(`${url} -> ${outputPath}`);
 
 for (let img of images) {
-    let fetched = await fetch(img.src);
-    let body = await fetched.arrayBuffer();
-    await writeFile(`Assets/${img.target}`, Buffer.from(body), { flag: 'wx' });
+    const fetched = await fetch(img.src);
+    const writeStream = createWriteStream(`Assets/${img.target}`, { flags: 'wx' });
+    await pipeline(fetched.body, writeStream);
     console.log(`${img.src} -> ${img.target}`);
 }
