@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
+import { Buffer } from 'node:buffer';
 import { randomBytes } from 'node:crypto';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { Readable } from 'node:stream';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
-import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
+import { JSDOM } from 'jsdom';
+import process from "node:process";
 import sanitize from 'sanitize-filename';
 import TurndownService from 'turndown';
 import yargs from 'yargs';
@@ -65,7 +66,7 @@ console.log(`${url} -> ${outputPath}`);
 
 for (let img of images) {
     let fetched = await fetch(img.src);
-    let body = Readable.fromWeb(fetched.body);
-    await writeFile(`Assets/${img.target}`, body, { flag: 'wx' });
+    let body = await fetched.arrayBuffer();
+    await writeFile(`Assets/${img.target}`, Buffer.from(body), { flag: 'wx' });
     console.log(`${img.src} -> ${img.target}`);
 }
