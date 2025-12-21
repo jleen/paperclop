@@ -1,19 +1,16 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S deno run --allow-net --allow-write --allow-read
 
-import { Buffer } from 'node:buffer';
-import { randomBytes } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { extname, join } from 'node:path';
+import { encodeHex } from '@std/encoding/hex';
+import { extname, join } from '@std/path';
 
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
-import process from "node:process";
 import sanitize from 'sanitize-filename';
 import TurndownService from 'turndown';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-const argv = yargs(hideBin(process.argv))
+const argv = yargs(hideBin(Deno.args))
     .usage('Usage: $0 <url> [options]')
     .positional('url', {
         describe: 'URL to fetch and save',
@@ -43,7 +40,7 @@ let doc = new JSDOM(article.content, { url: url }).window.document;
 let images = [];
 
 for (let img of doc.getElementsByTagName('img')) {
-    let renamed = 'img_' + randomBytes(8).toString('hex') + extname(img.src.split('?')[0]);
+    let renamed = 'img_' + encodeHex(crypto.getRandomValues(new Uint8Array(8))) + extname(img.src.split('?')[0]);
     images.push({ src: img.src, target: renamed });
     img.src = renamed;
 }
@@ -58,15 +55,15 @@ let outputPath = argv.dir ? join(argv.dir, `${title}.md`) : `${title}.md`;
 
 // Create output directory if it doesn't exist
 if (argv.dir) {
-    await mkdir(argv.dir, { recursive: true });
+    await Deno.mkdir(argv.dir, { recursive: true });
 }
 
-await writeFile(outputPath, md, { flag: 'wx' });
+await Deno.writeTextFile(outputPath, md, { createNew: true });
 console.log(`${url} -> ${outputPath}`);
 
 for (let img of images) {
-    let fetched = await fetch(img.src);
-    let body = await fetched.arrayBuffer();
-    await writeFile(`Assets/${img.target}`, Buffer.from(body), { flag: 'wx' });
+    const fetched = await fetch(img.src);
+    const file = await Deno.open(`Assets/${img.target}`, { write: true, createNew: true });
+    await fetched.body.pipeTo(file.writable);
     console.log(`${img.src} -> ${img.target}`);
 }
