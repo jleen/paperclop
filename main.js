@@ -1,44 +1,28 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S deno run --allow-net --allow-read --allow-write --allow-env
 
-import { randomBytes } from 'node:crypto';
-import { mkdir, writeFile, readFile, rename, access, constants } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
-import { extname, join } from 'node:path';
-import { pipeline } from 'node:stream/promises';
+import { extname, join } from "@std/path";
+import { parseArgs } from "@std/cli/parse-args";
+import { ensureDir } from "@std/fs";
 
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
-import process from "node:process";
-import sanitize from 'sanitize-filename';
 import TurndownService from 'turndown';
-import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
 
-const argv = yargs(hideBin(process.argv))
-    .usage('Usage: $0 <url-or-file> [options]')
-    .positional('url-or-file', {
-        describe: 'URL to fetch or local markdown file to process',
-        type: 'string'
-    })
-    .option('o', {
-        alias: 'out',
-        describe: 'Output filename (.md implied)',
-        type: 'string'
-    })
-    .option('d', {
-        alias: 'dir',
-        describe: 'Output subdirectory for the markdown file',
-        type: 'string'
-    })
-    .demandCommand(1, 'Please provide a URL or file path')
-    .help()
-    .parse();
-
-const input = argv._[0];
+function sanitizeFilename(name) {
+    return name
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
+        .replace(/^\.+/, '')
+        .replace(/\.+$/, '')
+        .trim()
+        .slice(0, 255);
+}
 
 function generateImageName(imageUrl) {
     const ext = extname(imageUrl.split('?')[0]);
-    return 'img_' + randomBytes(8).toString('hex') + (ext || '');
+    const randomHex = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    return 'img_' + randomHex + (ext || '');
 }
 
 function getExtensionFromContentType(contentType) {
@@ -70,8 +54,12 @@ async function downloadImages(images, markdown) {
             target += getExtensionFromContentType(contentType);
         }
 
-        const writeStream = createWriteStream(`Assets/${target}`, { flags: 'wx' });
-        await pipeline(fetched.body, writeStream);
+        await ensureDir('Assets');
+        const targetPath = `Assets/${target}`;
+
+        // Write image file
+        const arrayBuffer = await fetched.arrayBuffer();
+        await Deno.writeFile(targetPath, new Uint8Array(arrayBuffer), { createNew: true });
         console.log(`${img.src} -> ${target}`);
 
         // Update markdown with the final filename (including extension).
@@ -101,10 +89,35 @@ function extractImageUrls(markdown) {
     return images;
 }
 
+// Parse command-line arguments
+const args = parseArgs(Deno.args, {
+    string: ['out', 'dir'],
+    alias: { o: 'out', d: 'dir' },
+    boolean: ['help'],
+    default: { help: false },
+});
+
+if (args.help || args._.length === 0) {
+    console.log(`
+Usage: main.js <url-or-file> [options]
+
+Positional arguments:
+  url-or-file    URL to fetch or local markdown file to process
+
+Options:
+  -o, --out      Output filename (.md implied)
+  -d, --dir      Output subdirectory for the markdown file
+  --help         Show this help message
+`);
+    Deno.exit(args._.length === 0 ? 1 : 0);
+}
+
+const input = String(args._[0]);
+
 // Check if input is a local file path.
 let isLocalFile = false;
 try {
-    await access(input, constants.R_OK);
+    await Deno.stat(input);
     isLocalFile = true;
 } catch {
     // Not a local file, assume it's a URL.
@@ -115,20 +128,20 @@ let outputPath;
 
 if (isLocalFile) {
     // Process local markdown file.
-    const originalMd = await readFile(input, 'utf-8');
+    const originalMd = await Deno.readTextFile(input);
     const images = extractImageUrls(originalMd);
 
     outputPath = input;
 
     // Backup original file.
     const backupPath = `${input}.old`;
-    await rename(input, backupPath);
+    await Deno.rename(input, backupPath);
     console.log(`${input} -> ${backupPath}`);
 
     // Download images and get updated markdown with correct extensions.
     md = await downloadImages(images, originalMd);
 
-    await writeFile(outputPath, md, { flag: 'wx' });
+    await Deno.writeTextFile(outputPath, md, { createNew: true });
     console.log(`${input} -> ${outputPath}`);
 
 } else {
@@ -154,14 +167,14 @@ if (isLocalFile) {
     // Download images and get markdown with correct paths and extensions.
     md = await downloadImages(images, initialMd);
 
-    const title = argv.out ?? sanitize(article.title.replace('/', '-'));
-    outputPath = argv.dir ? join(argv.dir, `${title}.md`) : `${title}.md`;
+    const title = args.out ?? sanitizeFilename(article.title.replace('/', '-'));
+    outputPath = args.dir ? join(args.dir, `${title}.md`) : `${title}.md`;
 
     // Create output directory if it doesn't exist.
-    if (argv.dir) {
-        await mkdir(argv.dir, { recursive: true });
+    if (args.dir) {
+        await ensureDir(args.dir);
     }
 
-    await writeFile(outputPath, md, { flag: 'wx' });
+    await Deno.writeTextFile(outputPath, md, { createNew: true });
     console.log(`${input} -> ${outputPath}`);
 }
