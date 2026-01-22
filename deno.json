@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --watch main.js"
+    "dev": "deno run --watch main.ts"
   },
   "imports": {
     "@mozilla/readability": "npm:@mozilla/readability@^0.6.0",
