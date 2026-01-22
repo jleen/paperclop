@@ -15,6 +15,7 @@ interface ImageReference {
 
 function sanitizeFilename(name: string): string {
     return name
+        // deno-lint-ignore no-control-regex
         .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
         .replace(/^\.+/, '')
         .replace(/\.+$/, '')
