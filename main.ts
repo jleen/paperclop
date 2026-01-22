@@ -120,19 +120,13 @@ Options:
 
 const input = String(args._[0]);
 
-// Check if input is a local file path.
-let isLocalFile = false;
-try {
-    await Deno.stat(input);
-    isLocalFile = true;
-} catch {
-    // Not a local file, assume it's a URL.
-}
+// Check if input looks like a URL or a local file path.
+const isUrl = input.startsWith('http://') || input.startsWith('https://');
 
 let md: string;
 let outputPath: string;
 
-if (isLocalFile) {
+if (!isUrl) {
     // Process local markdown file.
     const originalMd = await Deno.readTextFile(input);
     const images = extractImageUrls(originalMd);
