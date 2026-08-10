@@ -1,6 +1,10 @@
 {
+  "bin": {
+    "paperclop": "./main.ts"
+  },
   "tasks": {
-    "dev": "deno run --watch main.ts"
+    "dev": "deno run --watch main.ts",
+    "install": "deno install -g -n paperclop --allow-net --allow-read --allow-write --allow-env --config deno.json main.ts"
   },
   "imports": {
     "@mozilla/readability": "npm:@mozilla/readability@^0.6.0",
